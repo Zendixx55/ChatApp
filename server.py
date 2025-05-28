@@ -17,7 +17,6 @@ def messagehandler(client_socket, username): #handling messages: accepting and s
         try:
             client_message = client_socket.recv(1024).decode()
             print(f"Received from {username}: {client_message}")
-            #
             t3 = threading.Thread(target=broadcast, args=(username, client_message))
             t3.start()
         except ConnectionResetError:
@@ -61,10 +60,6 @@ def on_connect(client_socket, client_address, clientlist): #This function is use
     t2 = threading.Thread(target=messagehandler, args=(client_socket, client_details['username']))
     t2.start()
 
-
-
-
-
 def retrieve_username_and_password(client_socket , client_address, ID): # Asks client for username and password
     client_socket.send(("Please enter username: ").encode())
     username = client_socket.recv(1024).decode().strip()
@@ -77,13 +72,10 @@ def retrieve_username_and_password(client_socket , client_address, ID): # Asks c
         'password': password,
         'ID': ID
     }
-    # print("Client socket stored as: " + str(type(client_socket)) + " in client_details") # debug
     return client_details
 
 def on_login(client_details, clientlist): # Authenticate with existing client list
     attempts = 1
-    given_username = client_details['username']
-    given_password = client_details['password']
     while attempts < 3:
         for client in clientlist:
             print('client.get("username") is :' + client.get('username')) # debug
@@ -91,7 +83,6 @@ def on_login(client_details, clientlist): # Authenticate with existing client li
             if client.get('username') == client_details['username'] and client.get('password') == client_details['password']:
                 client['client_socket'] = client_details['client_socket']
                 client['client_address'] = client_details['client_address']
-
                 return True
             else:
                 pass
@@ -108,8 +99,7 @@ def on_signup(client_details, ID, clientlist):
                 'password': client_details['password'],
                 'ID': client_details['ID']
             })
-    # print("Client socket stored as: " + str(type(clientlist[client_details['ID']]['client_socket'])) + " in clientlist") #debug
-    print("Client list: " + str(clientlist)) # debug
+    print("Client list updated: " + str(clientlist))
     ID += 1
 
 def ask_check_choice():
@@ -151,5 +141,4 @@ except Exception as e:
     server_socket.close()
 
 
-# option- add a quit function to delete the user from the client list
 # another option - dont allow 2 users have the same name
