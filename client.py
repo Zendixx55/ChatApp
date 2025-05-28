@@ -1,15 +1,39 @@
 import socket
 import threading
 
+running = True  # Shared flag between threads
+
 def listen_to_messages():
-    while True:
-        messages = client_socket.recv(1024).decode()
-        print(messages)
+    global running
+    while running:
+        try:
+            messages = client_socket.recv(1024).decode()
+            if not messages:
+                break
+            if messages == "Quitting program.":
+                print("Connection Lost.")
+                running = False
+                break
+            print(messages)
+        except:
+            break
+
+    client_socket.close()
 
 def send_message():
-    while True:
-        command = input('> ')
-        client_socket.send(command.encode())
+    global running
+    while running:
+        try:
+            command = input('> ')
+            if command.lower() in ["quit", "exit"]:
+                client_socket.send("Quitting program.".encode())
+                running = False
+                break
+            client_socket.send(command.encode())
+        except:
+            break
+
+    client_socket.close()
 
 client_socket = socket.socket()
 client_socket.connect(('127.0.0.1' , 1337)) # Change to the servers IP address
