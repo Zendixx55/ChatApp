@@ -16,9 +16,12 @@ def messagehandler(client_socket, username): #handling messages: accepting and s
     while client_message != 'quit':
         try:
             client_message = client_socket.recv(1024).decode()
-            print(f"Received from {username}: {client_message}")
-            t3 = threading.Thread(target=broadcast, args=(username, client_message))
-            t3.start()
+            if not client_message:
+                continue
+            else:
+                print(f"Received from {username}: {client_message}")
+                t3 = threading.Thread(target=broadcast, args=(username, client_message))
+                t3.start()
         except ConnectionResetError:
             print("Client " + username + " disconnected")
             client_socket.close()
@@ -38,11 +41,11 @@ def broadcast(nickname, client_message): # a broadcast function that sends the m
     print("Broadcast: " + str(broadcast_list))
 
 
-def on_connect(client_socket, client_address, clientlist): #This function is used to retrieve user login information
+def on_connect(client_socket, client_address, clientlist, ID): #This function is used to retrieve user login information
     print("Client connected")
     client_socket.send("Welcome to ChatApp! Would you like to login or signup? ".encode())
     choice = ask_check_choice().strip()
-    client_details = retrieve_username_and_password(client_socket, client_address, ID)
+    client_details = retrieve_client_details(client_socket, client_address, ID)
     if choice == 'login':
         if on_login(client_details ,clientlist):
             client_socket.send(f"Welcome back {client_details['username']}! Please write your message: ".encode())
@@ -52,15 +55,15 @@ def on_connect(client_socket, client_address, clientlist): #This function is use
             client_socket.close()
     elif choice == 'signup':
         on_signup(client_details, ID, clientlist)
-        client_socket.send(f"Welcome {client_details['username']}, Please write your message: ".encode())
-        # add_to_socketlist()
+        client_socket.send(f"Welcome {clientlist[ID]['username']}, Please write your message: ".encode())
+
     else:
         client_socket.send("Please type login/ signup: ".encode())
         choice = client_socket.recv(1024).decode().lower().strip()
-    t2 = threading.Thread(target=messagehandler, args=(client_socket, client_details['username']))
+    t2 = threading.Thread(target=messagehandler, args=(client_socket, clientlist[ID]['username']))
     t2.start()
 
-def retrieve_username_and_password(client_socket , client_address, ID): # Asks client for username and password
+def retrieve_client_details(client_socket, client_address, ID): # Asks client for username and password
     client_socket.send(("Please enter username: ").encode())
     username = client_socket.recv(1024).decode().strip()
     client_socket.send(("Please enter password: ").encode())
@@ -87,20 +90,26 @@ def on_login(client_details, clientlist): # Authenticate with existing client li
             else:
                 pass
         client_socket.send(f"One of your credentials is wrong, please try again. {3 - attempts} attempts left ".encode())
-        client_details = retrieve_username_and_password(client_details['client_socket'], client_details['client_address'])
+        client_details = retrieve_client_details(client_details['client_socket'], client_details['client_address'])
         attempts += 1
     return False
 
 def on_signup(client_details, ID, clientlist):
-    clientlist.append({
-                'client_socket': client_details['client_socket'],
-                'client_address': client_details['client_address'],
-                'username': client_details['username'],
-                'password': client_details['password'],
-                'ID': client_details['ID']
-            })
-    print("Client list updated: " + str(clientlist))
-    ID += 1
+    while True:
+        if any(client_details['username'] == client.get('username') for client in clientlist):
+            client_socket.send(f"{client_details['username']} is not available, please try again.".encode())
+        else:
+            clientlist.append({
+                    'client_socket': client_details['client_socket'],
+                    'client_address': client_details['client_address'],
+                    'username': client_details['username'],
+                    'password': client_details['password'],
+                    'ID': ID
+                })
+            print("Client list updated: " + str(clientlist))
+            break
+        client_details = retrieve_client_details(client_details['client_socket'], client_details['client_address'], client_details['ID'])
+
 
 def ask_check_choice():
     choice = client_socket.recv(1024).decode().lower().strip()
@@ -116,7 +125,7 @@ def ask_check_choice():
 port = 1337 #defying port number for connections
 clientlist = [] # empty client list to be filled later
 socketlist = [] # empty socket list to be filled later
-ID = 1 # user connection ID
+ID = 0 # user connection ID
 try:
     server_socket = socket.socket()
     server_socket.bind(('0.0.0.0' , port))
@@ -130,15 +139,13 @@ except Exception as e2: # try except was made for production stage when server c
 
 try:
     while True:
-        client_socket, client_address = server_socket.accept() # looping server acceptions
-        t1 = threading.Thread(target=on_connect, args=(client_socket, client_address, clientlist)) # starting client acception and message handling
+        client_socket, client_address = server_socket.accept() # looping server acceptations
+        t1 = threading.Thread(target=on_connect, args=(client_socket, client_address, clientlist, ID)) # starting client acceptation and message handling
         t1.start()
+        ID += 1
 
 except Exception as e:
-    print("Error!!!!")
+    print("Error!!!!") # rephrase
     print(e)
     client_socket.close()
     server_socket.close()
-
-
-# another option - dont allow 2 users have the same name
