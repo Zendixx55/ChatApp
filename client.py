@@ -26,11 +26,12 @@ def send_message():
         try:
             command = input('> ')
             if command.lower() in ["quit", "exit"]:
-                client_socket.send("Quitting program.".encode())
                 running = False
+                client_socket.send(command.encode())
                 break
             client_socket.send(command.encode())
         except:
+            client_socket.close()
             break
 
     client_socket.close()
