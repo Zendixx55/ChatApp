@@ -20,12 +20,8 @@ def on_connect(client_socket, client_address, clientlist):  # This function is u
             for client in clientlist:
                 if client['username'] == client_details['username']:  # make sure
                     ID = client['ID']
-                    print(ID) # debug
                     client_socket.send(f"Welcome back {clientlist[ID - 1]['username']}! Please write your message: ".encode())
                     break
-            print('ID after login: ' + str(ID)) # debug
-            # connected = True
-            # broadcast()
         else:
             client_socket.send("You have tried logging in too many times, Please try reconnecting. \n".encode())
             client_socket.send("Quitting program.".encode())
@@ -65,7 +61,6 @@ def retrieve_client_details(client_socket, client_address): # Asks client for us
 
 def on_login(client_details, clientlist): # Authenticate with existing client list
     attempts = 1
-    print(f"login: ID = {ID}")  # debug
     while attempts < 3:
         for client in clientlist:
             print('login: client.get("username") is :' + client.get('username')) # debug
@@ -86,7 +81,6 @@ def on_login(client_details, clientlist): # Authenticate with existing client li
 def on_signup(client_details, clientlist):
     while True:
         ID = new_user_ID(clientlist)
-        print(f"signup: ID = {ID}") #debug
         if any(client_details['username'] == client.get('username') for client in clientlist):
             client_socket.send(f"{client_details['username']} is not available, please try again.".encode())
         else:
@@ -99,17 +93,14 @@ def on_signup(client_details, clientlist):
                     'connected' : True
                 })
             broadcast(clientlist[ID]['username'], client_message='connected')
-            print(f"on_signup: connected status: {clientlist[ID - 1]['connected']}") # debug
             print("signup: [S] Client list updated: " + str(clientlist))
             break
         client_details = retrieve_client_details(client_details['client_socket'], client_details['client_address'])
 
 def messagehandler(clientlist, ID): # handling messages: accepting and sending to other users
-    print(f"MH: ID = {ID}") # debug
     client = clientlist[ID]
     print(f"[S] MH: client: {client}")
     print(f"[S] Started message handler for {client['username']}")
-    print(f"messagehandler: connected status: {client['connected']}") #debug
     client_message = client['client_socket'].recv(1024).decode()
     while client_message != 'quit' and client_message != 'exit':
         try:
@@ -130,10 +121,8 @@ def messagehandler(clientlist, ID): # handling messages: accepting and sending t
             break
         client_message = client['client_socket'].recv(1024).decode()
     broadcast(client['username'], client_message)
-    print(f"message handler: client asked {client_message} is: {client}")  # debug
     client['connected'] = False
     print("[S]MH: Client " + client['username'] + " disconnected")
-    print(f"MH: connected status: {client['connected']}")  # debug
     client['client_socket'].close()
 
 def broadcast(username, client_message ): # a broadcast function that sends the message to all connected clients
@@ -146,22 +135,18 @@ def broadcast(username, client_message ): # a broadcast function that sends the 
                 elif client_message == 'connected':
                     client['client_socket'].send((f"[!] User {username} is connected.").encode())
                 else:
-                    print(f"BC: client: {client['username']} connected: {client['connected']}") # debug
                     client['client_socket'].send((f"{username}: {client_message}").encode()) # actual broadcast line
             except BrokenPipeError: # in case client disconnects without quit/ exit command
-                print(f"broadcast: client is: {client}")  # debug
                 client['connected'] = False
                 for n in clientlist:
                     if n['connected']:
                         n['client_socket'].send((f"[!] User {client['username']} Disconnected.").encode())
                 print("[S]BC: Client " + client['username'] + " disconnected")
-                print(f"BC:connected status: {client['connected']}")  # debug
                 client['client_socket'].close()
                 pass
             except Exception as e:
                 print(f"[Se]BC: Error occurred while broadcasting. failed to send message to: {client['username']}\nError: {e}")
                 pass
-
 
 def new_user_ID(clientlist): # Will check for the last ID in client list and return a new ID for new user
     IDlist = []
@@ -174,20 +159,6 @@ def new_user_ID(clientlist): # Will check for the last ID in client list and ret
         if n >= IDvalue:
             IDvalue = n
     return IDvalue + 1
-
-
-        # try:
-        #     if client['ID'] >= IDvalue:
-        #         IDvalue = client['ID']
-        #         print(f"new user id value check: IDvalue = {IDvalue}")
-        #         pass
-        #     elif client['ID'] < IDvalue:
-        #         return IDvalue
-        # except Exception as e:
-        #     print("[Se] newuser: Error occurred while checking last ID: " + str(e))
-
-
-
 
 port = 1337 #defying port number for connections
 clientlist = [] # empty client list to be filled later
