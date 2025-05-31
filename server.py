@@ -187,5 +187,4 @@ except Exception as e:
     print(e)
     server_socket.close()
 
-# add user connected/ disconnected broadcast message
 # add show connected option
