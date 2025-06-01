@@ -10,7 +10,7 @@ global username
 
 
 def on_connect(client_socket, client_address, clientlist):  # This function is used to retrieve user login information
-    print("on connect: [S] Client connected")
+    print("[S] onconnect: Client connected")
     client_socket.send("Welcome to ChatApp! Would you like to login or signup? ".encode())
     choice = ask_check_choice().strip()
     client_details = retrieve_client_details(client_socket, client_address)
@@ -34,7 +34,7 @@ def on_connect(client_socket, client_address, clientlist):  # This function is u
         t2 = threading.Thread(target=messagehandler, args=(clientlist,ID))
         t2.start()
     except Exception as e:
-        print(f'on connect: [S] An error has occurred.\n{e}')
+        print(f'[Se] onconnect: An error has occurred.\n{e}')
 
 def ask_check_choice():
     choice = client_socket.recv(1024).decode().lower().strip()
@@ -63,8 +63,6 @@ def on_login(client_details, clientlist): # Authenticate with existing client li
     attempts = 1
     while attempts < 3:
         for client in clientlist:
-            print('login: client.get("username") is :' + client.get('username')) # debug
-            print('login: client_details["username"] is: ' + client_details['username']) # debug
             if client.get('username') == client_details['username'] and client.get('password') == client_details['password']:
                 client['client_socket'] = client_details['client_socket']
                 client['client_address'] = client_details['client_address']
@@ -93,14 +91,13 @@ def on_signup(client_details, clientlist):
                     'connected' : True
                 })
             broadcast(clientlist[ID]['username'], client_message='connected')
-            print("signup: [S] Client list updated: " + str(clientlist))
+            print("[S] singup: Client list updated: " + str(clientlist))
             break
         client_details = retrieve_client_details(client_details['client_socket'], client_details['client_address'])
 
 def messagehandler(clientlist, ID): # handling messages: accepting and sending to other users
     client = clientlist[ID]
-    print(f"[S] MH: client: {client}")
-    print(f"[S] Started message handler for {client['username']}")
+    print(f"[S] MH: Started message handler for {client['username']}")
     client_message = client['client_socket'].recv(1024).decode()
     while client_message != 'quit' and client_message != 'exit':
         try:
@@ -111,21 +108,17 @@ def messagehandler(clientlist, ID): # handling messages: accepting and sending t
                 for n in clientlist:
                     if n['connected']:
                         online.append(n['username'])
-                print(f"MH: Client list: {clientlist}") # debug
-                print(f"MH: Connected: {online}") # debug
                 client['client_socket'].send((f"Connected users: {online}").encode())
             else:
-                print(f"[S]MH: Received from {client['username']}: {client_message}")
+                print(f"[S] MH: Received from {client['username']}: {client_message}")
                 broadcast(client['username'], client_message)
         except ConnectionResetError: # in case client disconnects without quit/ exit command
-            print(f"message handler: client ID - 1 is: {client}") # debug
             client['connected'] = False
-            print("[S]MH: Client " + client['username'] + " disconnected")
-            print(f"MH: connected status: {client['connected']}") # debug
+            print("[Se] MH: Client " + client['username'] + " disconnected")
             client['client_socket'].close()
             break
         except Exception as e:
-            print("[Se]MH: An error has occurred. \n" + str(e))
+            print(f"[Se] MH: An error has occurred. \n{e}")
             break
         client_message = client['client_socket'].recv(1024).decode()
     broadcast(client['username'], client_message)
@@ -150,11 +143,11 @@ def broadcast(username, client_message ): # a broadcast function that sends the 
                 for n in clientlist:
                     if n['connected']:
                         n['client_socket'].send((f"[!] User {client['username']} Disconnected.").encode())
-                print("[S]BC: Client " + client['username'] + " disconnected")
+                print("[S] BC: Client " + client['username'] + " disconnected")
                 client['client_socket'].close()
                 pass
             except Exception as e:
-                print(f"[Se]BC: Error occurred while broadcasting. failed to send message to: {client['username']}\nError: {e}")
+                print(f"[Se] BC: Error occurred while broadcasting. failed to send message to: {client['username']}\nError: {e}")
                 pass
 
 def new_user_ID(clientlist): # Will check for the last ID in client list and return a new ID for new user
@@ -178,22 +171,18 @@ try:
     server_socket.bind(('0.0.0.0' , port))
     server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     server_socket.listen() #this and all 4 lines before starting the server and listening for connections
-    print(f"Server is listening on port {port}")
+    print(f"[S] Server is listening on port {port}")
+    try:
+        while True:
+            client_socket, client_address = server_socket.accept() # looping server acceptations
+            t1 = threading.Thread(target=on_connect, args=(client_socket, client_address, clientlist,)) # starting client acceptation and message handling
+            t1.start()
+    except Exception as e:
+        print(f"[S] An error occurred while accepting client connection:\n{e}")
+        server_socket.close()
 except Exception as e2: # try except was made for production stage when server crashes and need to wait for address to be available again
-    print("Error e2 !!!!")
-    print(e2)
-    server_socket.close()
-
-try:
-    while True:
-        client_socket, client_address = server_socket.accept() # looping server acceptations
-        t1 = threading.Thread(target=on_connect, args=(client_socket, client_address, clientlist,)) # starting client acceptation and message handling
-        t1.start()
+    print(f"[S] An error has occurred while starting server:\n{e2}")
 
 
-except Exception as e:
-    print("Error e !!!!") # rephrase
-    print(e)
-    server_socket.close()
 
 # add show connected option
