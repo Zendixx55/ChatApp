@@ -20,7 +20,7 @@ def on_connect(client_socket, client_address, clientlist):  # This function is u
             for client in clientlist:
                 if client['username'] == client_details['username']:  # make sure
                     ID = client['ID']
-                    client_socket.send(f"Welcome back {clientlist[ID - 1]['username']}! Please write your message: ".encode())
+                    client_socket.send(f"Welcome back {clientlist[ID]['username']}! Please write your message: ".encode())
                     break
         else:
             client_socket.send("You have tried logging in too many times, Please try reconnecting. \n".encode())
@@ -106,6 +106,14 @@ def messagehandler(clientlist, ID): # handling messages: accepting and sending t
         try:
             if not client_message:
                 continue
+            elif client_message == '!show connected':
+                online = []
+                for n in clientlist:
+                    if n['connected']:
+                        online.append(n['username'])
+                print(f"MH: Client list: {clientlist}") # debug
+                print(f"MH: Connected: {online}") # debug
+                client['client_socket'].send((f"Connected users: {online}").encode())
             else:
                 print(f"[S]MH: Received from {client['username']}: {client_message}")
                 broadcast(client['username'], client_message)
@@ -134,6 +142,7 @@ def broadcast(username, client_message ): # a broadcast function that sends the 
                     client['client_socket'].send((f"[!] User {username} Disconnected.").encode())
                 elif client_message == 'connected':
                     client['client_socket'].send((f"[!] User {username} is connected.").encode())
+
                 else:
                     client['client_socket'].send((f"{username}: {client_message}").encode()) # actual broadcast line
             except BrokenPipeError: # in case client disconnects without quit/ exit command
@@ -162,8 +171,8 @@ def new_user_ID(clientlist): # Will check for the last ID in client list and ret
 
 port = 1337 #defying port number for connections
 clientlist = [] # empty client list to be filled later
-socketlist = [] # empty socket list to be filled later
 ID = 0 # user connection ID
+
 try:
     server_socket = socket.socket()
     server_socket.bind(('0.0.0.0' , port))
