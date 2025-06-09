@@ -1,13 +1,11 @@
 import socket  #handliog client connections
 import threading  #creating a thread for each connection in order to run multiple connections simultaneously
 
-import thread
 global client_socket
 global client_address
 global clientlist
 global ID
 global username
-
 
 def on_connect(client_socket, client_address, clientlist):  # This function is used to retrieve user login information
     print("[S] onconnect: Client connected")
@@ -98,12 +96,13 @@ def on_signup(client_details, clientlist):
 def messagehandler(clientlist, ID): # handling messages: accepting and sending to other users
     client = clientlist[ID]
     print(f"[S] MH: Started message handler for {client['username']}")
-    client_message = client['client_socket'].recv(1024).decode()
-    while client_message != 'quit' and client_message != 'exit':
+    client_message = client['client_socket'].recv(1024).decode().strip()
+    client_message_handler = client_message.lower()
+    while client_message_handler != 'quit' and client_message_handler != 'exit':
         try:
-            if not client_message:
+            if not client_message_handler:
                 continue
-            elif client_message == '!show connected':
+            elif client_message_handler == '!show connected':
                 online = []
                 for n in clientlist:
                     if n['connected']:
@@ -166,6 +165,7 @@ port = 1337 #defying port number for connections
 clientlist = [] # empty client list to be filled later
 ID = 0 # user connection ID
 
+
 try:
     server_socket = socket.socket()
     server_socket.bind(('0.0.0.0' , port))
@@ -182,7 +182,6 @@ try:
         server_socket.close()
 except Exception as e2: # try except was made for production stage when server crashes and need to wait for address to be available again
     print(f"[S] An error has occurred while starting server:\n{e2}")
-
 
 
 # add show connected option
